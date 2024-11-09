@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chunked File Upload with Progress</title>
+    <style>
+        .progress-container {
+            width: 100%;
+            background-color: #f3f3f3;
+            margin: 10px 0;
+        }
+
+        .progress-bar {
+            width: 0;
+            height: 25px;
+            background-color: #4caf50;
+            text-align: center;
+            line-height: 25px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chunked File Upload with Progress Bar</h1>
+    <input type="file" id="fileInput">
+    <button onclick="startUpload()">Start Upload</button>
+    <p id="chunkInfo"></p>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar">0%</div>
+    </div>
+
+    <script>
+        async function startUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a file to upload.');
+                return;
+            }
+
+            const chunkSize = 5 * 1024 * 1024; // 5MB per chunk
+            const totalChunks = Math.ceil(file.size / chunkSize);
+            const uniqueId = generateUniqueId(); // Unique identifier for the session
+            const progressBar = document.getElementById('progressBar');
+            const chunkInfo = document.getElementById('chunkInfo');
+
+            for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+                const start = chunkIndex * chunkSize;
+                const end = Math.min(file.size, start + chunkSize);
+                const chunk = file.slice(start, end);
+
+                chunkInfo.textContent = `Uploading chunk ${chunkIndex + 1} of ${totalChunks}`;
+
+                try {
+                    await uploadChunk(chunk, chunkIndex, totalChunks, uniqueId, file.name);
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    alert('Upload failed. Please try again.');
+                    return;
+                }
+
+                // Update progress bar
+                const progressPercentage = ((chunkIndex + 1) / totalChunks) * 100;
+                progressBar.style.width = `${progressPercentage}%`;
+                progressBar.textContent = `${Math.round(progressPercentage)}%`;
+            }
+
+            console.log('Upload complete.');
+            chunkInfo.textContent = 'Upload complete!';
+        }
+
+        async function uploadChunk(chunk, chunkIndex, totalChunks, uniqueId, originalName, attempt = 1) {
+            const maxAttempts = 2; // Maximum retry attempts
+            const baseDelay = 1000; // Base delay for retries
+
+            const formData = new FormData();
+            formData.append('chunk', chunk);
+            formData.append('chunkIndex', chunkIndex);
+            formData.append('totalChunks', totalChunks);
+            formData.append('uniqueId', uniqueId);
+            formData.append('originalName', originalName); // Send original file name
+
+            try {
+                const response = await fetch('/upload-chunk', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error(`Server responded with status ${response.status}`);
+
+            } catch (error) {
+                console.error(`Chunk ${chunkIndex} upload failed:`, error);
+
+                if (attempt < maxAttempts) {
+                    const delay = Math.pow(2, attempt) * baseDelay; // Exponential backoff
+                    console.log(`Retrying chunk ${chunkIndex} in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return uploadChunk(chunk, chunkIndex, totalChunks, uniqueId, originalName, attempt + 1);
+                } else {
+                    throw new Error(`Failed to upload chunk ${chunkIndex} after multiple retries.`);
+                }
+            }
+        }
+
+        function generateUniqueId() {
+            return '_' + Math.random().toString(36).substr(2, 9); // Simple unique ID generation
+        }
+    </script>
+</body>
+</html>
