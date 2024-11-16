@@ -75,22 +75,26 @@ app.post('/upload-chunk', upload.single('chunk'), async (req, res) => {
 
 // Reassemble all chunks into a single file
 async function reassembleChunks(tempDir, finalFileName, totalChunks, uniqueId) {
-    const finalPath = path.join(finalUploadDir, finalFileName);
-    const writeStream = fs.createWriteStream(finalPath,finalFileName);
+    try{
+        const finalPath = path.join(finalUploadDir, finalFileName);
+        const writeStream = fs.createWriteStream(finalPath);
 
-    for (let i = 0; i < totalChunks; i++) {
-        const chunkPath = path.join(tempDir, `chunk_${i}`);
-        if (await fs.pathExists(chunkPath)) {
-            const data = await fs.readFile(chunkPath);
-            writeStream.write(data);
-        } else {
-            throw new Error(`Missing chunk: ${chunkPath}`);
+        for (let i = 0; i < totalChunks; i++) {
+            const chunkPath = path.join(tempDir, `chunk_${i}`);
+            if (await fs.pathExists(chunkPath)) {
+                const data = await fs.readFile(chunkPath);
+                writeStream.write(data);
+            } else {
+                throw new Error(`Missing chunk: ${chunkPath}`);
+            }
         }
-    }
 
-    writeStream.end();
-    await fs.remove(tempDir); // Remove temp directory after reassembling
-    startMultipleTranscodings(finalPath,finalFileName,uniqueId)
+        writeStream.end();
+        await fs.remove(tempDir); // Remove temp directory after reassembling
+        startMultipleTranscodings(finalPath,finalFileName,uniqueId)
+    }catch(e){
+        console.log(e.message)
+    }
 }
 
 // Generate a unique file name
