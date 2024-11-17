@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player</title>
+    <style>
+        video {
+            width: 100%;
+            max-width: 800px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video List</h1>
+    <div id="videoList"></div>
+    <hr>
+    <div id="videoPlayerContainer" style="display:none;">
+        <video id="videoPlayer" controls width="640"></video>
+        <div>
+            <label for="resolutionSelector">Change Resolution:</label>
+            <select id="resolutionSelector"></select>
+        </div>
+    </div>
+
+    <script>
+        const videoListContainer = document.getElementById('videoList');
+        const videoPlayerContainer = document.getElementById('videoPlayerContainer');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const resolutionSelector = document.getElementById('resolutionSelector');
+
+        fetch('/videos')
+            .then(response => response.json())
+            .then(videos => {
+                // Populate video list
+                for (const [baseName, resolutions] of Object.entries(videos)) {
+                    const resolutionsKeys = Object.keys(resolutions).sort(); // Sort resolutions (e.g., 480P -> 1080P)
+
+                    // Create a link for the lowest resolution
+                    const lowestResolution = resolutionsKeys[0];
+                    const link = document.createElement('a');
+                    link.href = '#';
+                    link.textContent = baseName;
+                    link.onclick = () => {
+                        playVideo(baseName, resolutions, lowestResolution);
+                        return false; // Prevent default link behavior
+                    };
+
+                    videoListContainer.appendChild(link);
+                    videoListContainer.appendChild(document.createElement('br'));
+                }
+            })
+            .catch(err => {
+                console.error('Error fetching videos:', err);
+                videoListContainer.textContent = 'Error loading videos.';
+            });
+
+        function playVideo(baseName, resolutions, initialResolution) {
+            videoPlayerContainer.style.display = 'block';
+            const initialUrl = "/video/"+resolutions[initialResolution].file;
+
+            // Load video at the initial resolution
+            videoPlayer.src = initialUrl;
+            videoPlayer.play();
+
+            // Populate resolution selector
+            resolutionSelector.innerHTML = ''; // Clear existing options
+            for (const [resolution, resolutionData] of Object.entries(resolutions)) {
+                const option = document.createElement('option');
+                option.value = "/video/"+resolutionData.file;
+                option.textContent = resolutionData.resolution;
+                if (resolution === initialResolution) {
+                    option.selected = true;
+                }
+                resolutionSelector.appendChild(option);
+            }
+
+            // Change resolution while preserving playback position
+            resolutionSelector.onchange = () => {
+                const currentTime = videoPlayer.currentTime;
+                videoPlayer.src = resolutionSelector.value;
+                videoPlayer.onloadedmetadata = () => {
+                    videoPlayer.currentTime = currentTime;
+                    videoPlayer.play();
+                };
+            };
+        }
+    </script>
+</body>
+</html>

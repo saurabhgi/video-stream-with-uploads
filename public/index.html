@@ -109,5 +109,24 @@
             return '_' + Math.random().toString(36).substr(2, 9); // Simple unique ID generation
         }
     </script>
+     <div id="videoList"></div>
+     <script>
+         fetch('/videos')
+             .then(response => response.json())
+             .then(videos => {
+                 // Populate video list
+                 const videoListContainer = document.getElementById('videoList');
+                 for (const [baseName, resolutions] of Object.entries(videos)) {
+                     const lowestResolution = Object.keys(resolutions).sort()[0];
+                     const link = document.createElement('a');
+                     link.href = `/player.html?video=${baseName}&resolution=${lowestResolution}`;
+                     link.textContent = baseName;
+                     videoListContainer.appendChild(link);
+                     videoListContainer.appendChild(document.createElement('br'));
+                 }
+             })
+             .catch(err => console.error('Error fetching videos:', err));
+     </script>
+     
 </body>
 </html>
