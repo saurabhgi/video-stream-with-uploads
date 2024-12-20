@@ -184,9 +184,9 @@ async function reassembleChunks(tempDir, finalFileName, totalChunks, uniqueId) {
 // Generate a unique file name
 function generateUniqueFileName(originalName) {
     const ext = path.extname(originalName);
-    const baseName = path.basename(originalName, ext);
+    // const baseName = path.basename(originalName, ext);
     const uniqueSuffix = crypto.randomBytes(8).toString('hex');
-    return `${baseName}-${uniqueSuffix}${ext}`;
+    return `${uniqueSuffix}${ext}`;
 }
 
 // Start transcoding to 480p, 720p, and 1080p at 30fps
