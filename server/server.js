@@ -80,8 +80,8 @@ app.get('/video/:filename', (req, res) => {
             return res.status(404).send('Video not found');
         }
 
-        const range = req.headers.range;
-        const fileSize = stats.size;
+        const range = req.headers.range; // Get the range header from the request
+        const fileSize = stats.size; // Get the size of the video file
 
         if (range) {
             const [startStr, endStr] = range.replace(/bytes=/, '').split('-');
